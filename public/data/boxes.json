@@ -1,0 +1,68 @@
+[
+  {
+    "id": 1,
+    "name": "Buffer Overflow Basic",
+    "difficulty": "Easy",
+    "os": "Linux",
+    "category": "Binary Exploitation",
+    "description": "Learn basic buffer overflow techniques on a vulnerable Linux binary.",
+    "status": "stopped",
+    "timeRemaining": null,
+    "ip": null
+  },
+  {
+    "id": 2,
+    "name": "Web App SQLi",
+    "difficulty": "Medium",
+    "os": "Linux",
+    "category": "Web Application",
+    "description": "Exploit SQL injection vulnerabilities in a web application.",
+    "status": "stopped",
+    "timeRemaining": null,
+    "ip": null
+  },
+  {
+    "id": 3,
+    "name": "Windows Privilege Escalation",
+    "difficulty": "Hard",
+    "os": "Windows",
+    "category": "Post-Exploitation",
+    "description": "Practice privilege escalation techniques on Windows systems.",
+    "status": "stopped",
+    "timeRemaining": null,
+    "ip": null
+  },
+  {
+      "id": 4,
+      "name": "Network Services Enumeration",
+      "difficulty": "Easy",
+      "os": "Linux",
+      "category": "Reconnaissance",
+      "description": "Learn to enumerate and exploit common network services.",
+      "status": "running",
+      "timeRemaining": "2h 15m",
+      "ip": "10.10.11.123"
+    },
+    {
+      "id": 5,
+      "name": "Active Directory Attack",
+      "difficulty": "Hard",
+      "os": "Windows",
+      "category": "Active Directory",
+      "description": "Advanced AD attack techniques including Kerberoasting and DCSync.",
+      "status": "stopped",
+      "timeRemaining": null,
+      "ip": null
+    },
+    {
+      "id": 6,
+      "name": "Docker Escape",
+      "difficulty": "Medium",
+      "os": "Linux",
+      "category": "Container Security",
+      "description": "Break out of misconfigured Docker containers.",
+      "status": "stopped",
+      "timeRemaining": null,
+      "ip": null
+    }
+]
