@@ -39,9 +39,9 @@
       "os": "Linux",
       "category": "Reconnaissance",
       "description": "Learn to enumerate and exploit common network services.",
-      "status": "running",
-      "timeRemaining": "2h 15m",
-      "ip": "10.10.11.123"
+      "status": "stopped",
+      "timeRemaining": null,
+      "ip": null
     },
     {
       "id": 5,
