@@ -1,6 +1,6 @@
-'use client'
+'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 
 interface RunningBox {
   id: number;
@@ -25,7 +25,8 @@ const RPCTransactionViewer = () => {
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
+  // 🔹 Reads from localStorage
+  const updateRpcFromStorage = useCallback(() => {
     try {
       const runningBoxesData = localStorage.getItem('runningBoxes');
       if (runningBoxesData) {
@@ -33,20 +34,30 @@ const RPCTransactionViewer = () => {
         if (runningBoxes.length > 0 && runningBoxes[0].ip) {
           const ip = runningBoxes[0].ip;
           setRpcUrl(`http://${ip}:8545`);
+          return;
         }
       }
+      setRpcUrl(null);
     } catch (err) {
       console.error('Error parsing localStorage data:', err);
     }
   }, []);
 
-  const fetchContracts = async () => {
+  // 🔹 Watch localStorage changes
+  useEffect(() => {
+    updateRpcFromStorage();
+    window.addEventListener('storage', updateRpcFromStorage);
+    return () => window.removeEventListener('storage', updateRpcFromStorage);
+  }, [updateRpcFromStorage]);
+
+  // 🔹 Fetch contracts (only last 50 blocks for speed)
+  const fetchContracts = useCallback(async () => {
     if (!rpcUrl) return;
     setLoading(true);
     setError(null);
-    setContracts([]);
 
     try {
+      // 1. Get latest block
       const blockNumberResponse = await fetch(rpcUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -63,7 +74,10 @@ const RPCTransactionViewer = () => {
 
       const contractDeployments: ContractDeployment[] = [];
 
-      for (let i = 0; i <= latestBlockNumber; i++) {
+      // 🔹 Limit to last 50 blocks for performance
+      const startBlock = Math.max(0, latestBlockNumber - 50);
+
+      for (let i = startBlock; i <= latestBlockNumber; i++) {
         const blockResponse = await fetch(rpcUrl, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -76,8 +90,10 @@ const RPCTransactionViewer = () => {
         });
 
         const blockData = await blockResponse.json();
+
         if (blockData.result?.transactions) {
           const contractTxs = blockData.result.transactions.filter((tx: any) => tx.to === null);
+
           for (const tx of contractTxs) {
             const receiptResponse = await fetch(rpcUrl, {
               method: 'POST',
@@ -111,14 +127,22 @@ const RPCTransactionViewer = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [rpcUrl]);
 
+  // 🔹 Auto-fetch whenever RPC becomes available
+  useEffect(() => {
+    if (rpcUrl) {
+      fetchContracts();
+    }
+  }, [rpcUrl, fetchContracts]);
+
+  // --- UI ---
   if (!rpcUrl) {
     return (
       <div className="p-4 flex items-center justify-center">
         <div className="bg-yellow-100 border border-yellow-400 text-yellow-700 px-4 py-3 rounded max-w-md">
           <strong className="font-bold">No RPC Connection!</strong>
-          <span className="block sm:inline"> You must start box first to view transactions.</span>
+          <span className="block sm:inline"> Start a box to view contracts.</span>
         </div>
       </div>
     );
@@ -138,7 +162,7 @@ const RPCTransactionViewer = () => {
             disabled={loading}
             className="bg-blue-500 hover:bg-blue-700 disabled:bg-blue-300 text-white font-bold py-2 px-4 rounded transition-colors"
           >
-            {loading ? 'Loading...' : 'Show Contract Addresses'}
+            {loading ? 'Loading...' : 'Refresh Contracts'}
           </button>
         </div>
 
@@ -185,7 +209,7 @@ const RPCTransactionViewer = () => {
 
         {contracts.length === 0 && !loading && !error && rpcUrl && (
           <div className="text-center text-gray-500 py-8">
-            Click "Show Contract Addresses" to fetch deployed contracts from your RPC node.
+            No deployed contracts found in the last 50 blocks.
           </div>
         )}
       </div>

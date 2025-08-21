@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react';
 import { Play, Square, Clock, Terminal, Globe } from 'lucide-react';
 import NavBar from './_components/layout/navbar';
 import Scanner from './_components/blocks/scanner';
+import Account from './_components/blocks/accounts';
 interface Box {
   id: number;
   name: string;
@@ -19,6 +20,8 @@ interface Box {
 export default function ProvingGroundsUI() {
   const [boxes, setBoxes] = useState<Box[]>([]);
   const [loading, setLoading] = useState(true);
+
+  
 
   // Load boxes from localStorage and merge with JSON data
   useEffect(() => {
@@ -59,6 +62,7 @@ export default function ProvingGroundsUI() {
     }));
   
   localStorage.setItem('runningBoxes', JSON.stringify(activeBoxes));
+  window.dispatchEvent(new Event("storage"));
 }, [boxes]);
 
   const startBox = async (id: number) => {
@@ -318,6 +322,9 @@ export default function ProvingGroundsUI() {
        
       </div>
        <Scanner/>
+       {boxes.find(box => box.status === 'running')?.container_name && (
+  <Account containerName={boxes.find(box => box.status === 'running')!.container_name!} />
+)}
     </div>
   );
 }
