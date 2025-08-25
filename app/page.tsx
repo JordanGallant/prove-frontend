@@ -3,7 +3,7 @@ import { useState, useEffect } from 'react';
 import { Play, Square, Clock, Terminal, Globe } from 'lucide-react';
 import NavBar from './_components/layout/navbar';
 import Scanner from './_components/blocks/scanner';
-import Account from './_components/blocks/accounts';
+
 interface Box {
   id: number;
   name: string;
@@ -20,8 +20,6 @@ interface Box {
 export default function ProvingGroundsUI() {
   const [boxes, setBoxes] = useState<Box[]>([]);
   const [loading, setLoading] = useState(true);
-
-  
 
   // Load boxes from localStorage and merge with JSON data
   useEffect(() => {
@@ -46,24 +44,24 @@ export default function ProvingGroundsUI() {
       });
   }, []);
 
-    // Save running boxes to localStorage whenever boxes change
-    useEffect(() => {
-  // Don't save if boxes haven't loaded yet
-  if (boxes.length === 0) return;
-  
-  const activeBoxes = boxes
-    .filter(box => box.status !== 'stopped')
-    .map(box => ({
-      id: box.id,
-      status: box.status,
-      container_name: box.container_name,
-      ip: box.ip,
-      timeRemaining: box.timeRemaining
-    }));
-  
-  localStorage.setItem('runningBoxes', JSON.stringify(activeBoxes));
-  window.dispatchEvent(new Event("storage"));
-}, [boxes]);
+  // Save running boxes to localStorage whenever boxes change
+  useEffect(() => {
+    // Don't save if boxes haven't loaded yet
+    if (boxes.length === 0) return;
+    
+    const activeBoxes = boxes
+      .filter(box => box.status !== 'stopped')
+      .map(box => ({
+        id: box.id,
+        status: box.status,
+        container_name: box.container_name,
+        ip: box.ip,
+        timeRemaining: box.timeRemaining
+      }));
+    
+    localStorage.setItem('runningBoxes', JSON.stringify(activeBoxes));
+    window.dispatchEvent(new Event("storage"));
+  }, [boxes]);
 
   const startBox = async (id: number) => {
     try {
@@ -81,6 +79,7 @@ export default function ProvingGroundsUI() {
         headers: {
           'Content-Type': 'application/json',
         },
+        body: JSON.stringify({ box_id: id }),
       });
 
       const data = await response.json();
@@ -140,7 +139,6 @@ export default function ProvingGroundsUI() {
       });
 
       const data = await response.json();
-      console.log(data);
 
       if (data.success) {
         setBoxes(prev =>
@@ -207,6 +205,7 @@ export default function ProvingGroundsUI() {
           <h2 className="text-3xl font-bold text-gray-900 mb-2">Vulnerable Environments</h2>
           <p className="text-gray-600">Start and manage your practice environments</p>
         </div>
+        
         {/* Boxes Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {boxes.map(box => (
@@ -318,13 +317,9 @@ export default function ProvingGroundsUI() {
             </div>
           ))}
         </div>
-
-       
       </div>
-       <Scanner/>
-       {boxes.find(box => box.status === 'running')?.container_name && (
-  <Account containerName={boxes.find(box => box.status === 'running')!.container_name!} />
-)}
+      
+      <Scanner/>
     </div>
   );
 }
