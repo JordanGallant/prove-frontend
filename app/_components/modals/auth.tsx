@@ -13,7 +13,7 @@ interface AuthModalProps {
 }
 
 interface UserMenuProps {
-  user: User
+  user: User | { wallet_address: string }
   onSignOut: () => void
 }
 
@@ -23,6 +23,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, mode, setMode })
   const [password, setPassword] = useState<string>('')
   const [loading, setLoading] = useState<boolean>(false)
   const [error, setError] = useState<string>('')
+  const [walletLoading, setWalletLoading] = useState<boolean>(false)
   
   const supabase = createClientComponentClient()
 
@@ -55,6 +56,67 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, mode, setMode })
     }
   }
 
+  const handleWalletAuth = async (action: 'signup' | 'login') => {
+    if (!window.ethereum) {
+      setError('MetaMask not installed')
+      return
+    }
+
+    setWalletLoading(true)
+    setError('')
+
+    try {
+      // Connect wallet
+      const accounts = await window.ethereum.request({
+        method: 'eth_requestAccounts'
+      })
+      
+      const account = accounts[0]
+      const message = `${action === 'signup' ? 'Sign up' : 'Login'} to App\nNonce: ${Date.now()}`
+      
+      // Sign message
+      const signature = await window.ethereum.request({
+        method: 'personal_sign',
+        params: [message, account]
+      })
+
+      // Send to backend
+      const response = await fetch('/api/auth/wallet', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          address: account, 
+          signature, 
+          message,
+          action
+        })
+      })
+
+      const result = await response.json()
+
+      if (response.ok) {
+        if (action === 'signup') {
+          setError('')
+          alert('Wallet account created! Please login now.')
+        } else {
+          localStorage.setItem('wallet-token', result.token)
+          localStorage.setItem('wallet-address', account)
+          window.location.reload() // Simple refresh to update auth state
+        }
+      } else {
+        if (result.error.includes('not found') && action === 'login') {
+          setError('Wallet not registered. Please sign up first.')
+        } else {
+          setError(result.error)
+        }
+      }
+    } catch (error: any) {
+      setError(error.message || 'Wallet authentication failed')
+    } finally {
+      setWalletLoading(false)
+    }
+  }
+
   if (!isOpen) return null
 
   return (
@@ -72,6 +134,36 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, mode, setMode })
           </button>
         </div>
 
+        {/* MetaMask Section */}
+        <div className="mb-6 p-4 bg-gray-50 rounded-lg">
+          <div className="flex items-center mb-3">
+            <div className="w-8 h-8 bg-orange-500 rounded-lg flex items-center justify-center mr-3">
+              <span className="text-white text-lg">🦊</span>
+            </div>
+            <h3 className="text-lg font-semibold text-gray-900">Login with MetaMask</h3>
+          </div>
+          
+          <button
+            onClick={() => handleWalletAuth(mode)}
+            disabled={walletLoading}
+            className="w-full bg-orange-500 text-white py-2 px-4 rounded-md hover:bg-orange-600 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
+          >
+            {walletLoading ? (
+              <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+            ) : (
+              `${mode === 'login' ? 'Login' : 'Sign Up'} with Wallet`
+            )}
+          </button>
+        </div>
+
+        {/* Divider */}
+        <div className="flex items-center mb-6">
+          <div className="flex-1 border-t border-gray-300"></div>
+          <div className="px-3 text-sm text-gray-500">or continue with email</div>
+          <div className="flex-1 border-t border-gray-300"></div>
+        </div>
+
+        {/* Email/Password Form */}
         <form onSubmit={handleAuth}>
           {error && (
             <div className="mb-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded">
@@ -135,6 +227,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, mode, setMode })
 // User Menu Dropdown Component
 const UserMenu: React.FC<UserMenuProps> = ({ user, onSignOut }) => {
   const [isOpen, setIsOpen] = useState<boolean>(false)
+  const isWalletUser = 'wallet_address' in user
 
   return (
     <div className="relative">
@@ -144,10 +237,15 @@ const UserMenu: React.FC<UserMenuProps> = ({ user, onSignOut }) => {
       >
         <div className="w-8 h-8 bg-gray-300 rounded-full flex items-center justify-center">
           <span className="text-sm font-medium">
-            {user.email?.charAt(0).toUpperCase()}
+            {isWalletUser ? '🦊' : user.email?.charAt(0).toUpperCase()}
           </span>
         </div>
-        <span className="text-sm font-medium">{user.email}</span>
+        <span className="text-sm font-medium">
+          {isWalletUser 
+            ? `${user.wallet_address.slice(0, 6)}...${user.wallet_address.slice(-4)}`
+            : user.email
+          }
+        </span>
       </button>
 
       {isOpen && (
@@ -165,7 +263,7 @@ const UserMenu: React.FC<UserMenuProps> = ({ user, onSignOut }) => {
 }
 
 const NavBar: React.FC = () => {
-  const [user, setUser] = useState<User | null>(null)
+  const [user, setUser] = useState<User | { wallet_address: string } | null>(null)
   const [loading, setLoading] = useState<boolean>(true)
   const [showAuthModal, setShowAuthModal] = useState<boolean>(false)
   const [authMode, setAuthMode] = useState<'login' | 'signup'>('login')
@@ -174,17 +272,42 @@ const NavBar: React.FC = () => {
 
   useEffect(() => {
     const getUser = async () => {
+      // Check for Supabase auth
       const { data: { session } } = await supabase.auth.getSession()
-      setUser(session?.user ?? null)
+      
+      if (session?.user) {
+        setUser(session.user)
+      } else {
+        // Check for wallet auth
+        const walletToken = localStorage.getItem('wallet-token')
+        const walletAddress = localStorage.getItem('wallet-address')
+        
+        if (walletToken && walletAddress) {
+          setUser({ wallet_address: walletAddress })
+        }
+      }
+      
       setLoading(false)
     }
 
     getUser()
 
-   
+    // Listen for Supabase auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
-        setUser(session?.user ?? null)
+        if (session?.user) {
+          setUser(session.user)
+        } else {
+          // Check wallet auth when Supabase auth is cleared
+          const walletToken = localStorage.getItem('wallet-token')
+          const walletAddress = localStorage.getItem('wallet-address')
+          
+          if (walletToken && walletAddress) {
+            setUser({ wallet_address: walletAddress })
+          } else {
+            setUser(null)
+          }
+        }
         setLoading(false)
       }
     )
@@ -193,7 +316,11 @@ const NavBar: React.FC = () => {
   }, [])
 
   const handleSignOut = async (): Promise<void> => {
+    // Sign out from both systems
     await supabase.auth.signOut()
+    localStorage.removeItem('wallet-token')
+    localStorage.removeItem('wallet-address')
+    setUser(null)
   }
 
   const openAuthModal = (mode: 'login' | 'signup'): void => {
@@ -207,6 +334,7 @@ const NavBar: React.FC = () => {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
             <div className="flex items-center">
+              <h1 className="text-xl font-bold">My App</h1>
             </div>
             
             <div className="flex items-center space-x-4">
