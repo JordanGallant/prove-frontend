@@ -173,7 +173,6 @@ const NavBar: React.FC = () => {
   const supabase = createClientComponentClient()
 
   useEffect(() => {
-    // Get initial session
     const getUser = async () => {
       const { data: { session } } = await supabase.auth.getSession()
       setUser(session?.user ?? null)
@@ -182,7 +181,7 @@ const NavBar: React.FC = () => {
 
     getUser()
 
-    // Listen for auth changes
+   
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
         setUser(session?.user ?? null)
