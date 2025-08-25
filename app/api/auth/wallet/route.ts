@@ -34,12 +34,16 @@ export async function POST(request: NextRequest) {
 
     if (action === 'login') {
       // Check if user exists
-      const { data: user, error } = await supabase
-        .from('wallet_users')
-        .select('*')
-        .eq('wallet_address', walletAddress)
-        .single();
+       await supabase.rpc('set_wallet_context', { 
+    wallet_addr: walletAddress 
+  });
 
+  const { data: user, error } = await supabase
+    .from('wallet_users')
+    .select('*')
+    .eq('wallet_address', walletAddress)
+    .single();
+  
       if (error || !user) {
         return NextResponse.json({ error: 'User not found' }, { status: 404 });
       }
