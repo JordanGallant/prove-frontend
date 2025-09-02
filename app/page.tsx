@@ -74,7 +74,7 @@ export default function ProvingGroundsUI() {
         )
       );
 
-      const response = await fetch('http://52.149.64.209:5000/start-lab', {
+      const response = await fetch('https://52.149.64.209:5000/start-lab', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -131,7 +131,7 @@ export default function ProvingGroundsUI() {
         )
       );
 
-      const response = await fetch(`http://52.149.64.209:5000/stop-lab/${box.container_name}`, {
+      const response = await fetch(`https://52.149.64.209:5000/stop-lab/${box.container_name}`, {
         method: 'DELETE',
         headers: {
           'Content-Type': 'application/json',
