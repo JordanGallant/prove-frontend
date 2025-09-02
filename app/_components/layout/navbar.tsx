@@ -3,7 +3,6 @@ import React, { useState, useEffect } from 'react'
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
 import { User } from '@supabase/supabase-js'
 import AuthModal from "../modals/auth"
-import VPNGenerator from '../modals/vpn'
 
 export default function NavBar() {
   const [user, setUser] = useState<User | { wallet_address: string } | null>(null)
@@ -64,7 +63,6 @@ export default function NavBar() {
               <h1 className="text-2xl font-bold text-gray-900">Proving Grounds</h1>
             </div>            
             <div className="flex items-center space-x-4">
-              <VPNGenerator user={user} />
               <AuthModal />
             </div>
           </div>
