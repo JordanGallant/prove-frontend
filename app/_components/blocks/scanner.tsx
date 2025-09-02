@@ -33,7 +33,7 @@ const RPCTransactionViewer = () => {
         const runningBoxes: RunningBox[] = JSON.parse(runningBoxesData);
         if (runningBoxes.length > 0 && runningBoxes[0].ip) {
           const ip = runningBoxes[0].ip;
-          setRpcUrl(`http://${ip}:8545`);
+          setRpcUrl(`https://${ip}:8545`);
           return;
         }
       }
